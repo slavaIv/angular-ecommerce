@@ -36,4 +36,4 @@ To get more help on the Angular CLI use `ng help` or go check out the [Angular C
 
 ## Backend
 
-The project works on the Spring Boot backend server. The backend project called ecommerceapp and is situated in the ecommerceapp repository
+The project works on the Spring Boot backend server. The backend project is called ecommerceapp and is situated in the ecommerceapp repository
