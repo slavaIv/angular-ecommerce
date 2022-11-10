@@ -4,6 +4,7 @@ import { Country } from 'src/app/common/country';
 import { State } from 'src/app/common/state';
 import { FormServiceService } from 'src/app/services/form-service.service';
 import { CustomValidator } from 'src/app/validators/custom-validator';
+import { CartService } from 'src/app/services/cart.service'
 
 @Component({
   selector: 'app-checkout',
@@ -25,7 +26,7 @@ export class CheckoutComponent implements OnInit {
     shippingAddressStates: State[] = [];
     billingAddressStates: State[] = [];
 
-    constructor(private formBuilder: FormBuilder, private formService: FormServiceService) { }
+    constructor(private formBuilder: FormBuilder, private formService: FormServiceService, private cartService: CartService) { }
 
 
 
@@ -57,13 +58,6 @@ export class CheckoutComponent implements OnInit {
                 securityCode: new FormControl('', [Validators.required, Validators.pattern('[0-9]{3}'), CustomValidator.notOnlyWhitespace]),
                 expMonth: [''],
                 expYear: ['']
-
-                // cardType: [''],
-                // cardName: [''],
-                // cardNumber: [''],
-                // securityCode: [''],
-                // expMonth: [''],
-                // expYear: ['']
             })
        });
 
@@ -86,8 +80,10 @@ export class CheckoutComponent implements OnInit {
                 this.countries = data;
             }
         );
-    }
 
+        this.reviewCartDetail();        
+    }
+    
     get firstName() {return this.checkoutFormGroup.get('customer.firstName');}
     get lastName() {return this.checkoutFormGroup.get('customer.lastName');}
     get email() {return this.checkoutFormGroup.get('customer.email');}
@@ -112,6 +108,15 @@ export class CheckoutComponent implements OnInit {
     get expYear() {return this.checkoutFormGroup.get('creditCard.expYear')};
 
 
+    reviewCartDetail() {
+        this.cartService.totalPrice.subscribe(
+            data => this.totalPrice = data
+        );
+    
+        this.cartService.totalQuantity.subscribe(
+            data => this.totalQuantity = data
+        );
+    }
 
     onSubmit() {
         console.log("Handle submit button");
