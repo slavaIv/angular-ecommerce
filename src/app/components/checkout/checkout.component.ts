@@ -5,6 +5,11 @@ import { State } from 'src/app/common/state';
 import { FormServiceService } from 'src/app/services/form-service.service';
 import { CustomValidator } from 'src/app/validators/custom-validator';
 import { CartService } from 'src/app/services/cart.service'
+import { CheckoutService } from 'src/app/services/checkout.service';
+import { Router } from '@angular/router';
+import { Order } from 'src/app/common/order';
+import { OrderItem } from 'src/app/common/order-item';
+import { Purchase } from 'src/app/common/purchase';
 
 @Component({
   selector: 'app-checkout',
@@ -26,7 +31,11 @@ export class CheckoutComponent implements OnInit {
     shippingAddressStates: State[] = [];
     billingAddressStates: State[] = [];
 
-    constructor(private formBuilder: FormBuilder, private formService: FormServiceService, private cartService: CartService) { }
+    constructor(private formBuilder: FormBuilder, 
+                private formService: FormServiceService, 
+                private cartService: CartService,
+                private checkoutService: CheckoutService,
+                private router: Router) { }
 
 
 
@@ -119,17 +128,75 @@ export class CheckoutComponent implements OnInit {
     }
 
     onSubmit() {
-        console.log("Handle submit button");
-
+        
         if(this.checkoutFormGroup.invalid) {
             this.checkoutFormGroup.markAllAsTouched();
+            return;
         }
 
+        // set up order
+        let order = new Order();
+        order.totalPrice = this.totalPrice;
+        order.totalQuantity = this.totalQuantity;
 
-        console.log(this.checkoutFormGroup.get('customer').value);
+        // get cart items
+        const cartItems = this.cartService.cartItems;
+        
+        // create orderItems from cartItems
+        // let orderItems: OrderItem[] = [];
+        // for(let i = 0; i < cartItems.length; i++) {
+        //     orderItems[i] = new OrderItem(cartItems[i]);
+        // }
+        let orderItems: OrderItem[] = cartItems.map(tempCartItem => new OrderItem(tempCartItem));
 
-        console.log(this.checkoutFormGroup.get('shippingAddress').value.country.name);
-        console.log(this.checkoutFormGroup.get('billingAddress').value.state.name);
+        // set up purchase
+        let purchase = new Purchase();
+
+        // populate purchase - customer
+        purchase.customer = this.checkoutFormGroup.controls['customer'].value;
+
+        // populate purchase - shipping address
+        purchase.shippingAddress = this.checkoutFormGroup.controls['shippingAddress'].value;
+        const shippingState: State = JSON.parse(JSON.stringify(purchase.shippingAddress.state));
+        const shippingCountry: Country = JSON.parse(JSON.stringify(purchase.shippingAddress.country));
+        purchase.shippingAddress.state = shippingState.name;
+        purchase.shippingAddress.country = shippingCountry.name;
+
+        // populate purchase - billing address
+        purchase.billingAddress = this.checkoutFormGroup.controls['billingAddress'].value;
+        const billingState: State = JSON.parse(JSON.stringify(purchase.billingAddress.state));
+        const billingCountry: Country = JSON.parse(JSON.stringify(purchase.billingAddress.country));
+        purchase.billingAddress.state = billingState.name;
+        purchase.billingAddress.country = billingCountry.name;
+
+        // populate purchase - order and orderItems
+        purchase.order = order;
+        purchase.orderItems = orderItems;
+
+        // call REST API via the CheckoutService
+        this.checkoutService.placeOrder(purchase).subscribe({
+                next: response => {
+                    alert(`Your order has been received.\nOrder Tracking number is: ${response.orderTrackingNumber}`);
+                    this.resetCart();
+                },
+                error: err => {
+                    alert(`There was an error: ${err.message}`);
+                }
+            }
+        );
+
+    }
+    resetCart() {
+        // reset cart data
+        this.cartService.cartItems = [];
+        this.cartService.totalPrice.next(0);
+        this.cartService.totalQuantity.next(0);
+
+        // reset the form
+        this.checkoutFormGroup.reset();
+
+        // navigate back to the product page
+        this.router.navigateByUrl("/products");
     }
 
     copyShippingAddressToBillingAddress(event) {
